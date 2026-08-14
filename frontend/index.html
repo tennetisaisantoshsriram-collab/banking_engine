@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NextGen Banking Engine</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css?v=3">
+</head>
+<body>
+    <!-- ===== AUTH OVERLAY ===== -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-container glass-card">
+            <div class="auth-logo">
+                <div class="logo-orb" style="width:44px;height:44px;"></div>
+                <h1 style="font-size:2rem; letter-spacing:-1px;">Aether AI</h1>
+            </div>
+            <p style="color:var(--text-muted); margin-bottom:1.5rem; text-align:center; font-size:0.95rem;">Banking Intelligence Platform</p>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-login">Login</button>
+                <button class="auth-tab" id="tab-signup">Sign Up</button>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login-form">
+                <div class="auth-input-wrap">
+                    <label>Username</label>
+                    <input type="text" id="login-username" class="glass-input" placeholder="e.g. demo" style="width:100%;" autocomplete="username">
+                </div>
+                <div class="auth-input-wrap">
+                    <label>Password</label>
+                    <input type="password" id="login-password" class="glass-input" placeholder="Enter password" style="width:100%;" autocomplete="current-password">
+                </div>
+                <div id="login-error" class="auth-error"></div>
+                <button id="login-btn" class="neon-btn" style="width:100%; margin-top:1.2rem; font-size:1rem; padding:0.9rem;">Login</button>
+                <div class="sample-badge">
+                    <strong>Sample credentials:</strong><br>
+                    Username: <code>demo</code> &nbsp;&nbsp; Password: <code>demo123</code>
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signup-form" style="display:none;">
+                <div class="auth-input-wrap">
+                    <label>Username</label>
+                    <input type="text" id="signup-username" class="glass-input" placeholder="Choose a username (min 3 chars)" style="width:100%;" autocomplete="username">
+                </div>
+                <div class="auth-input-wrap">
+                    <label>Password</label>
+                    <input type="password" id="signup-password" class="glass-input" placeholder="Choose a password (min 4 chars)" style="width:100%;" autocomplete="new-password">
+                </div>
+                <div id="signup-error" class="auth-error"></div>
+                <button id="signup-btn" class="neon-btn" style="width:100%; margin-top:1.2rem; font-size:1rem; padding:0.9rem;">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <div class="logo-orb"></div>
+                <h1>Aether AI</h1>
+            </div>
+            <nav class="nav-menu">
+                <li class="nav-item active" data-target="view-customer"><span class="icon">🔍</span> AI Assessment</li>
+                <li class="nav-item" data-target="view-analytics"><span class="icon">📈</span> Portfolio Analytics</li>
+                <li class="nav-item" data-target="view-new-customer"><span class="icon">➕</span> New Analysis</li>
+                <li class="nav-item" data-target="view-settings"><span class="icon">⚙️</span> Config</li>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user" id="logged-in-user"></div>
+                <button id="logout-btn" class="logout-btn">Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- VIEW: PORTFOLIO -->
+            <div id="view-portfolio" class="view-section hidden">
+                <header class="topbar glass-panel flex-between">
+                    <h2>Macro Portfolio Dashboard</h2>
+                </header>
+                <div class="kpi-grid">
+                    <div class="kpi-card glass-card">
+                        <h3>Total Customers</h3>
+                        <div class="kpi-value glow-text" id="kpi-customers">--</div>
+                    </div>
+                    <div class="kpi-card glass-card">
+                        <h3>Total Loan Exposure</h3>
+                        <div class="kpi-value glow-text" id="kpi-exposure">--</div>
+                    </div>
+                    <div class="kpi-card glass-card">
+                        <h3>Avg Default Rate</h3>
+                        <div class="kpi-value text-alert glow-text" id="kpi-default">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: ANALYTICS -->
+            <div id="view-analytics" class="view-section hidden">
+                <header class="topbar glass-panel">
+                    <h2>Portfolio Analytics & Matrix</h2>
+                </header>
+                <div class="dashboard-grid">
+                    <section class="card glass-card flex-1" style="grid-column: span 2;">
+                        <h2>Risk Correlation Matrix</h2>
+                        <div class="chart-container-wide">
+                            <canvas id="heatmapChart"></canvas>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- VIEW: CUSTOMER INTELLIGENCE -->
+            <div id="view-customer" class="view-section active">
+                <header class="topbar glass-panel flex-between">
+                    <div class="search-container">
+                        <select id="customer-select" class="glass-input" style="max-width:200px;">
+                            <option value="">Select a Customer ID...</option>
+                        </select>
+                        <button id="search-btn" class="neon-btn">Load AI Profile</button>
+                        <button id="advanced-search-btn" class="neon-btn" style="background: rgba(255,255,255,0.1); color:var(--text-main);">🔍 Advanced</button>
+                    </div>
+                    <div class="actions-container">
+                        <button id="theme-btn" class="icon-btn" title="Toggle Theme">🌓</button>
+                        <button id="csv-export-btn" class="icon-btn" title="Export CSV Data">⬇️</button>
+                        <button id="export-btn" class="icon-btn" title="Export PDF Report">📄</button>
+                        <div class="user-avatar"></div>
+                    </div>
+                </header>
+
+                <div class="dashboard-grid">
+                    
+                    <!-- Left Column -->
+                    <div class="col-left">
+                        <!-- Customer Profile -->
+                        <section class="card glass-card">
+                            <h2>Profile Data</h2>
+                            <div class="profile-details" id="profile-details">
+                                <p class="placeholder-text">Load a customer to view data.</p>
+                            </div>
+                            
+                            <h3 class="section-subtitle mt-4">Active Products</h3>
+                            <div class="tags-container" id="owned-products"></div>
+                        </section>
+
+                        <!-- Customer History Timeline -->
+                        <section class="card glass-card">
+                            <h2>History Timeline</h2>
+                            <div id="history-timeline" class="timeline">
+                                <p class="placeholder-text">Load a customer to view history.</p>
+                            </div>
+                        </section>
+
+                        <!-- CRM Notes -->
+                        <section class="card glass-card">
+                            <h2>CRM Notes</h2>
+                            <textarea id="crm-notes-input" class="glass-input" rows="4" placeholder="Type customer notes here..." style="width:100%; resize:vertical; font-size:0.9rem;" disabled></textarea>
+                            <button id="save-notes-btn" class="neon-btn" style="margin-top:0.5rem; width:100%;" disabled>Save Note</button>
+                        </section>
+                        
+                        <!-- What-If Simulator -->
+                        <section class="card glass-card highlight-border">
+                            <h2><span class="icon">⚡</span> "What-If" AI Simulator</h2>
+                            <p class="helper-text" style="color:var(--text-muted); font-size:0.8rem; margin-bottom:1rem;">Drag sliders to recalculate risk in real-time.</p>
+                            
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <label>Loan Amount Request</label>
+                                    <span id="loan-val-display" class="slider-val">$0</span>
+                                </div>
+                                <input type="range" id="sim-loan" min="1000" max="150000" step="1000" value="1000" class="neon-slider" disabled>
+                            </div>
+                            
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <label>Reported Income</label>
+                                    <span id="income-val-display" class="slider-val">$0</span>
+                                </div>
+                                <input type="range" id="sim-income" min="20000" max="250000" step="5000" value="20000" class="neon-slider" disabled>
+                            </div>
+
+                            <div class="slider-group" style="margin-top:1.5rem;">
+                                <div class="slider-header">
+                                    <label>Macro-Economic Environment</label>
+                                </div>
+                                <select id="sim-environment" class="glass-input" style="width: 100%; margin-top:0.5rem;" disabled>
+                                    <option value="Neutral">Neutral (Current Baseline)</option>
+                                    <option value="Recession">Severe Recession</option>
+                                    <option value="High Interest">High Interest Rates</option>
+                                    <option value="Booming">Booming Economy</option>
+                                </select>
+                            </div>
+
+                            <!-- Decision Engine -->
+                            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-card);">
+                                <button id="decision-engine-btn" class="neon-btn" style="width:100%; font-size:1.1rem;" disabled>⚖️ Run Decision Engine</button>
+                                <div id="decision-output" style="text-align:center; margin-top:1rem; font-size:1.2rem; font-weight:bold;"></div>
+                            </div>
+
+                            <!-- Amortization Schedule -->
+                            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-card);">
+                                <h3 class="section-subtitle">Estimated Monthly Payment (5 Yrs @ 7%)</h3>
+                                <div id="monthly-payment-display" class="metric-big glow-text text-green" style="font-size:2rem; text-align:center;">$0</div>
+                            </div>
+                        </section>
+
+                        <!-- Peer Comparison -->
+                        <section class="card glass-card">
+                            <h2>Peer Group Comparison</h2>
+                            <div class="chart-container-radar">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div class="col-right">
+                        <!-- AI Metrics Panel -->
+                        <div class="metrics-row">
+                            <!-- Default Risk -->
+                            <section class="card glass-card metrics-card flex-1">
+                                <div class="card-header" style="margin-bottom:0;">
+                                    <h2 style="margin:0;">Default Risk</h2>
+                                </div>
+                                <div class="chart-container-small">
+                                    <canvas id="riskChart"></canvas>
+                                    <div class="gauge-value" id="risk-score-value">0%</div>
+                                </div>
+                            </section>
+                            
+                            <!-- Advanced AI Scores -->
+                            <section class="card glass-card metrics-card flex-1 flex-col justify-center">
+                                <div class="advanced-metric">
+                                    <label>Est. Lifetime Value (CLV)</label>
+                                    <div class="metric-big glow-text text-green" id="clv-value">$0</div>
+                                </div>
+                                <div class="advanced-metric mt-4">
+                                    <label>Fraud Probability Score</label>
+                                    <div class="metric-big" id="fraud-value">0%</div>
+                                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="fraud-bar"></div></div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- SHAP Explainability -->
+                        <section class="card glass-card">
+                            <h2>Real-Time AI Explainability (SHAP)</h2>
+                            <div class="chart-container-wide">
+                                <canvas id="shapChart"></canvas>
+                        </section>
+
+                        <!-- Scatter Plot: Risk vs Income -->
+                        <section class="card glass-card">
+                            <h2>Portfolio Distribution (Risk vs. Income)</h2>
+                            <div class="chart-container-wide">
+                                <canvas id="scatterChart"></canvas>
+                            </div>
+                        </section>
+
+                        <!-- Cross-Sell Engine -->
+                        <section class="card glass-card">
+                            <h2>Next Best Action Recommendations</h2>
+                            <div class="recommendations-list" id="recommendations-list">
+                                <p class="placeholder-text">Load a customer to generate offers.</p>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+            <!-- VIEW: NEW CUSTOMER ANALYSIS -->
+            <div id="view-new-customer" class="view-section hidden">
+                <header class="topbar glass-panel">
+                    <div>
+                        <h2>New Customer Analysis</h2>
+                        <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.25rem;">Enter any customer data to get instant AI risk analysis.</p>
+                    </div>
+                </header>
+
+                <div class="new-customer-layout">
+                    <!-- Input Form -->
+                    <section class="card glass-card highlight-border">
+                        <h2>Customer Input Form</h2>
+                        <p style="color:var(--text-muted); font-size:0.85rem; margin:0.5rem 0 1.5rem;">Sample data is pre-filled. Edit any field and click Run Analysis.</p>
+                        <div class="input-form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Age</label>
+                                <input type="number" id="input-age" value="35" min="18" max="90" class="glass-input form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Annual Income ($)</label>
+                                <input type="number" id="input-income" value="75000" min="10000" max="500000" class="glass-input form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Employment Length (yrs)</label>
+                                <input type="number" id="input-emp" value="7" min="0" max="40" class="glass-input form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Credit Score (300–850)</label>
+                                <input type="number" id="input-credit" value="680" min="300" max="850" class="glass-input form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Loan Amount ($)</label>
+                                <input type="number" id="input-loan" value="25000" min="1000" max="500000" class="glass-input form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Economic Environment</label>
+                                <select id="input-env" class="glass-input form-input">
+                                    <option value="Neutral">Neutral (Baseline)</option>
+                                    <option value="Recession">Severe Recession</option>
+                                    <option value="High Interest">High Interest Rates</option>
+                                    <option value="Booming">Booming Economy</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:1rem; margin-top:1.5rem;">
+                            <button id="analyze-custom-btn" class="neon-btn" style="flex:1; font-size:1rem;">Run AI Analysis</button>
+                            <button id="reset-sample-btn" class="neon-btn" style="background:rgba(255,255,255,0.07); color:var(--text-main); box-shadow:none; border:1px solid var(--border-card);">Load Sample</button>
+                        </div>
+                    </section>
+
+                    <!-- Results Panel (hidden until first run) -->
+                    <div id="custom-results-panel" style="display:none; flex-direction:column; gap:1.5rem;">
+                        <div class="custom-results-metrics">
+                            <section class="card glass-card metrics-card flex-1">
+                                <h2 style="margin-bottom:0;">Default Risk</h2>
+                                <div class="chart-container-small">
+                                    <canvas id="customRiskChart"></canvas>
+                                    <div class="gauge-value" id="custom-risk-value">0%</div>
+                                </div>
+                            </section>
+                            <section class="card glass-card metrics-card flex-1 flex-col justify-center">
+                                <div class="advanced-metric">
+                                    <label>Est. Lifetime Value (CLV)</label>
+                                    <div class="metric-big glow-text text-green" id="custom-clv-value">$0</div>
+                                </div>
+                                <div class="advanced-metric mt-4">
+                                    <label>Fraud Probability</label>
+                                    <div class="metric-big" id="custom-fraud-value">0%</div>
+                                    <div class="progress-bar-bg"><div class="progress-bar-fill" id="custom-fraud-bar"></div></div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <section class="card glass-card">
+                            <h2>AI Explainability (SHAP)</h2>
+                            <div class="chart-container-wide">
+                                <canvas id="customShapChart"></canvas>
+                            </div>
+                        </section>
+
+                        <section class="card glass-card">
+                            <h2>Risk Summary</h2>
+                            <div id="custom-risk-summary"></div>
+                            <button id="custom-decision-btn" class="neon-btn" style="width:100%; margin-top:1rem;">Run Decision Engine</button>
+                            <div id="custom-decision-output" style="text-align:center; margin-top:1rem; font-size:1.3rem; font-weight:bold;"></div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+    <!-- AI Chatbot Floating UI -->
+    <div id="ai-chat-panel" class="glass-card" style="position:fixed; bottom:20px; right:20px; width:300px; height:400px; display:flex; flex-direction:column; border:1px solid rgba(255,255,255,0.2); z-index:100; transform: translateY(120%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <div style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:1rem;">🤖 AI Analyst</h3>
+            <button id="close-chat-btn" style="background:none; border:none; color:white; cursor:pointer;">✖</button>
+        </div>
+        <div id="chat-messages" style="flex:1; padding:10px; overflow-y:auto; font-size:0.9rem; display:flex; flex-direction:column; gap:10px;">
+            <div style="background:rgba(99, 102, 241, 0.2); padding:8px; border-radius:8px; align-self:flex-start; max-width:85%;">
+                Hello! Load a customer profile and ask me anything about their risk.
+            </div>
+        </div>
+        <div style="padding:10px; border-top:1px solid rgba(255,255,255,0.1); display:flex; gap:5px;">
+            <input type="text" id="chat-input" class="glass-input" placeholder="Ask AI..." style="flex:1; padding:8px; font-size:0.9rem;" disabled>
+            <button id="send-chat-btn" class="neon-btn" style="padding:8px 12px;" disabled>Send</button>
+        </div>
+    </div>
+    <button id="open-chat-btn" class="neon-btn" style="position:fixed; bottom:20px; right:20px; border-radius:50%; width:60px; height:60px; font-size:1.5rem; display:flex; align-items:center; justify-content:center; padding:0; z-index:99; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5);">💬</button>
+
+    <!-- Hidden form for simulator state -->
+    <input type="hidden" id="sim-cust-id">
+    <input type="hidden" id="sim-age">
+    <input type="hidden" id="sim-emp">
+    <input type="hidden" id="sim-credit">
+    
+    <!-- Advanced Search Modal -->
+    <div id="advanced-search-modal" class="glass-card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:400px; z-index:1000; flex-direction:column; padding:2rem; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+        <h2 style="margin-top:0;">Advanced Filtering</h2>
+        <div class="slider-group" style="margin-top:1rem;">
+            <label>Minimum Income</label>
+            <input type="number" id="search-min-income" class="glass-input" style="width:100%; margin-top:0.5rem;" value="50000">
+        </div>
+        <div class="slider-group" style="margin-top:1rem;">
+            <label>Maximum Default Risk (%)</label>
+            <input type="number" id="search-max-risk" class="glass-input" style="width:100%; margin-top:0.5rem;" value="40">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:2rem;">
+            <button id="close-modal-btn" class="neon-btn" style="background:rgba(255,255,255,0.1); color:var(--text-main);">Cancel</button>
+            <button id="apply-search-btn" class="neon-btn">Apply Filter</button>
+        </div>
+    </div>
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(5px); z-index:999;"></div>
+
+    <script src="app.js?v=12"></script>
+</body>
+</html>
