@@ -70,3 +70,9 @@ IBM_CaseStudy*.docx
 # Local configuration
 config.local.*
 secrets.*
+# Superpowers / brainstorm
+.superpowers/
+~$*.docx
+users.json
+write_mockup.py
+generate_casestudy.py
