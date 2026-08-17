@@ -1,0 +1,18 @@
+app = "banking-engine-aether"
+primary_region = "sin"
+
+[build]
+  [build.args]
+    PYTHON_VERSION = "3.11"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
