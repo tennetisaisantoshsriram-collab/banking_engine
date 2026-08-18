@@ -9,3 +9,4 @@ data/*.csv
 create_notebook.py
 *.zip
 .ipynb_checkpoints/
+.cf/
