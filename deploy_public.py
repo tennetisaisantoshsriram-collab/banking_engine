@@ -12,10 +12,11 @@ How it works:
 """
 
 import os, sys, re, time, signal, platform, subprocess, threading, urllib.request, shutil
-# Force UTF-8 output on Windows
+os.environ["PYTHONUNBUFFERED"] = "1"
+# Force UTF-8 unbuffered output on Windows
 if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 PORT       = 8501
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
@@ -56,19 +57,23 @@ def get_cloudflared():
     os.makedirs(CF_DIR, exist_ok=True)
     print(f"  Downloading cloudflared for {system}...")
 
-    tmp = cf_bin + ".tmp"
+    # Kill any stale cloudflared processes on Windows before writing binary
+    if IS_WINDOWS:
+        subprocess.call("taskkill /F /IM cloudflared.exe >NUL 2>&1", shell=True)
+        time.sleep(1)
+
     try:
-        urllib.request.urlretrieve(cf_url, tmp)
+        if system == "Darwin" and cf_url.endswith(".tgz"):
+            import tarfile, tempfile
+            tmp = cf_bin + ".tmp.tgz"
+            urllib.request.urlretrieve(cf_url, tmp)
+            with tarfile.open(tmp) as t:
+                t.extractall(CF_DIR)
+            os.remove(tmp)
+        else:
+            urllib.request.urlretrieve(cf_url, cf_bin)
     except Exception as e:
         print(f"{RED}Download failed: {e}{RESET}"); sys.exit(1)
-
-    if system == "Darwin" and cf_url.endswith(".tgz"):
-        import tarfile
-        with tarfile.open(tmp) as t:
-            t.extractall(CF_DIR)
-        os.remove(tmp)
-    else:
-        os.rename(tmp, cf_bin)
 
     if not IS_WINDOWS:
         os.chmod(cf_bin, 0o755)
@@ -105,13 +110,38 @@ def extract_url(line):
     m = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", line)
     return m.group(0) if m else None
 
+def kill_stale():
+    """Kill any leftover processes from previous runs."""
+    if IS_WINDOWS:
+        subprocess.call("taskkill /F /IM cloudflared.exe", shell=True,
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Kill process on PORT using Python
+        try:
+            out = subprocess.check_output(f"netstat -ano | findstr :{PORT}", shell=True,
+                                          stderr=subprocess.DEVNULL).decode(errors="replace")
+            for line in out.strip().splitlines():
+                parts = line.split()
+                if parts and parts[-1].isdigit():
+                    pid = int(parts[-1])
+                    subprocess.call(f"taskkill /F /PID {pid}", shell=True,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception:
+            pass
+    else:
+        subprocess.call("pkill -f cloudflared", shell=True, stderr=subprocess.DEVNULL)
+        subprocess.call(f"fuser -k {PORT}/tcp", shell=True, stderr=subprocess.DEVNULL)
+    time.sleep(1)
+
 def main():
     banner()
+
+    # Clean up stale processes from any previous run
+    kill_stale()
 
     # ── Step 1: cloudflared ─────────────────────────────
     print(f"{BOLD}[1/3] Checking Cloudflare tunnel binary...{RESET}")
     cf_bin = get_cloudflared()
-    print(f"  {GREEN}✓ Ready{RESET}")
+    print(f"  {GREEN}OK{RESET}")
 
     # ── Step 2: Streamlit ───────────────────────────────
     print(f"\n{BOLD}[2/3] Starting Streamlit app on port {PORT}...{RESET}")
