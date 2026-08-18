@@ -1,5 +1,10 @@
 # Banking Credit Default Risk & Cross-Sell Engine
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-banking--credit--engine.onrender.com-blue?style=for-the-badge&logo=render)](https://banking-credit-engine.onrender.com)
+[![GitHub](https://img.shields.io/badge/GitHub-banking__engine-181717?style=for-the-badge&logo=github)](https://github.com/tennetisaisantoshsriram-collab/banking_engine)
+
+> **Live Prototype:** [https://banking-credit-engine.onrender.com](https://banking-credit-engine.onrender.com)
+
 An end-to-end machine learning system that predicts loan default risk and recommends cross-sell banking products to low-risk customers.
 
 Built as an internship portfolio project demonstrating full ML engineering: data pipeline, model comparison, explainability, recommendation engine, and interactive UI.
@@ -18,9 +23,22 @@ Built as an internship portfolio project demonstrating full ML engineering: data
 
 ---
 
-## Quick Start
+## Live Demo
 
-### 1. Clone & Install
+The app is deployed and running — no setup required:
+
+**[https://banking-credit-engine.onrender.com](https://banking-credit-engine.onrender.com)**
+
+| Page | Description |
+|------|-------------|
+| Risk Assessor | Enter customer details → get risk score + SHAP factors + cross-sell recommendations |
+| Model Performance | ROC curves, confusion matrix, SHAP importance, default rate by grade |
+
+> Note: Free tier spins down after inactivity — first load may take ~30 seconds.
+
+---
+
+## Quick Start (Local)
 ```bash
 git clone https://github.com/tennetisaisantoshsriram-collab/banking_engine.git
 cd banking_engine
@@ -160,6 +178,18 @@ pytest tests/ -v
 For a bank processing 10,000 applications/month at avg loan $15,000:
 - **Default detection** catches the majority of likely defaulters before approval
 - **Cross-sell routing** targets ~7,800 eligible low-risk customers/month — even 5% conversion represents meaningful incremental revenue
+
+---
+
+## Deployment
+
+Hosted on **Render** — auto-deploys on every `git push` to master via GitHub Actions.
+
+| | |
+|---|---|
+| Live URL | https://banking-credit-engine.onrender.com |
+| CI/CD | GitHub Actions → Render API |
+| Auto-deploy | Every push to `master` |
 
 ---
 
