@@ -12,10 +12,15 @@ How it works:
 """
 
 import os, sys, re, time, signal, platform, subprocess, threading, urllib.request, shutil
+# Force UTF-8 output on Windows
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 PORT       = 8501
-CF_DIR     = os.path.join(os.path.dirname(__file__), ".cf")
-APP_FILE   = os.path.join(os.path.dirname(__file__), "app.py")
+BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
+CF_DIR     = os.path.join(BASE_DIR, ".cf")
+APP_FILE   = os.path.join(BASE_DIR, "app.py")
 IS_WINDOWS = platform.system() == "Windows"
 
 CF_URLS = {
@@ -33,14 +38,14 @@ RED   = "\033[91m"
 
 def banner():
     print(f"""
-{BOLD}{CYAN}╔══════════════════════════════════════════════════════╗
-║   Banking Credit Risk Engine — Public Deployment     ║
-╚══════════════════════════════════════════════════════╝{RESET}
+{BOLD}{CYAN}+------------------------------------------------------+
+|   Banking Credit Risk Engine - Public Deployment    |
++------------------------------------------------------+{RESET}
 """)
 
 def get_cloudflared():
     system = platform.system()
-    cf_bin = os.path.join(CF_DIR, "cloudflared.exe" if IS_WINDOWS else "cloudflared")
+    cf_bin = os.path.abspath(os.path.join(CF_DIR, "cloudflared.exe" if IS_WINDOWS else "cloudflared"))
     if os.path.exists(cf_bin):
         return cf_bin
 
@@ -92,7 +97,8 @@ def start_streamlit():
 def start_tunnel(cf_bin):
     cmd = [cf_bin, "tunnel", "--url", f"http://localhost:{PORT}"]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            universal_newlines=True, bufsize=1)
+                            universal_newlines=True, bufsize=1,
+                            encoding="utf-8", errors="replace")
     return proc
 
 def extract_url(line):
@@ -134,11 +140,11 @@ def main():
         st_proc.terminate(); cf_proc.terminate(); sys.exit(1)
 
     print(f"""
-{BOLD}{GREEN}╔══════════════════════════════════════════════════════╗
-║   APP IS LIVE                                        ║
-╠══════════════════════════════════════════════════════╣
-║   {public_url:<52} ║
-╚══════════════════════════════════════════════════════╝{RESET}
+{BOLD}{GREEN}+------------------------------------------------------+
+|   APP IS LIVE                                        |
++------------------------------------------------------+
+|   {public_url:<52} |
++------------------------------------------------------+{RESET}
 
   {YELLOW}Share this URL with anyone — works on any device.{RESET}
   {YELLOW}URL stays active while this terminal is open.{RESET}

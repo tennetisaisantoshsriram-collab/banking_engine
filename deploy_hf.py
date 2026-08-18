@@ -12,6 +12,9 @@ Result:  https://huggingface.co/spaces/YOUR_USERNAME/banking-credit-engine
 """
 
 import os, sys, argparse, textwrap
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 SPACE_NAME = "banking-credit-engine"
 REPO_FILES = [
@@ -46,9 +49,9 @@ RED   = "\033[91m"
 
 def banner():
     print(f"""
-{BOLD}{CYAN}╔══════════════════════════════════════════════════════╗
-║   Banking Credit Risk Engine — HF Spaces Deploy     ║
-╚══════════════════════════════════════════════════════╝{RESET}
+{BOLD}{CYAN}+------------------------------------------------------+
+|   Banking Credit Risk Engine - HF Spaces Deploy     |
++------------------------------------------------------+{RESET}
 """)
 
 def main():
@@ -112,11 +115,11 @@ def main():
     print(f"""
 {BOLD}[3/3] Deployment complete! ({uploaded} files uploaded){RESET}
 
-{BOLD}{GREEN}╔══════════════════════════════════════════════════════╗
-║   PERMANENT LIVE URL                                 ║
-╠══════════════════════════════════════════════════════╣
-║   {space_url:<52} ║
-╚══════════════════════════════════════════════════════╝{RESET}
+{BOLD}{GREEN}+------------------------------------------------------+
+|   PERMANENT LIVE URL                                 |
++------------------------------------------------------+
+|   {space_url:<52} |
++------------------------------------------------------+{RESET}
 
   {YELLOW}Note: First build takes ~3-5 minutes on HF Spaces.{RESET}
   {YELLOW}After that, it stays live permanently for free.{RESET}
