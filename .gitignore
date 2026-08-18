@@ -1,6 +1,11 @@
 venv/
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
 artifacts/
-data/
+data/*.csv
 .env
+create_notebook.py
+*.zip
+.ipynb_checkpoints/
