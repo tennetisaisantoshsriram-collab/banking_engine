@@ -1,0 +1,36 @@
+name: Deploy — Auto Deploy to Render
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    needs: []
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deploy
+        run: |
+          echo "Triggering Render deployment..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          echo "Render response: $RESPONSE"
+          if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "201" ]; then
+            echo "Deployment triggered successfully!"
+          else
+            echo "Deploy hook returned: $RESPONSE"
+            exit 1
+          fi
+
+      - name: Deployment Summary
+        run: |
+          echo "=========================================="
+          echo "  Deployment triggered on Render"
+          echo "  App URL: ${{ secrets.RENDER_APP_URL }}"
+          echo "  Branch: ${{ github.ref_name }}"
+          echo "  Commit: ${{ github.sha }}"
+          echo "=========================================="
