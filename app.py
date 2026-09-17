@@ -152,22 +152,6 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 /* ── Divider ── */
 .divider { height: 1px; background: #e8edf5; margin: 1.2rem 0; }
 
-/* ── Nav tabs ── */
-.nav-bar {
-    display: flex; gap: 8px; margin-bottom: 1.5rem;
-    background: #f4f7fc; border-radius: 12px; padding: 6px;
-    border: 1px solid #e0e8f5;
-}
-.nav-tab {
-    flex: 1; text-align: center; padding: 8px 0;
-    border-radius: 8px; font-size: 0.85rem; font-weight: 600;
-    cursor: pointer; color: #6b7a99; border: none; background: transparent;
-}
-.nav-tab-active {
-    background: #0a2540; color: white;
-    box-shadow: 0 2px 8px rgba(10,37,64,0.2);
-}
-
 /* ── Back button ── */
 .stButton > button {
     background: #0a2540; color: white; border: none;
@@ -403,19 +387,13 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── TAB NAV ───────────────────────────────────────────────────────────────────
-tabs = ["🔍 Risk Assessor", "📊 Model Performance"]
-tab_sel = st.radio("nav", tabs, horizontal=True, label_visibility="collapsed",
-                   index=0 if st.session_state.page != "performance" else 1)
-if tab_sel == tabs[1]: st.session_state.page = "performance"
-elif st.session_state.page == "performance": st.session_state.page = "home"
-
-st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+# ── TABS (native Streamlit) ───────────────────────────────────────────────────
+tab_risk, tab_perf = st.tabs(["🔍 Risk Assessor", "📊 Model Performance"])
 
 # ════════════════════════════════════════════════════════════════════════════════
-# PAGE: RISK ASSESSOR
+# TAB: RISK ASSESSOR
 # ════════════════════════════════════════════════════════════════════════════════
-if st.session_state.page in ("home", "results"):
+with tab_risk:
 
     if st.session_state.page == "home":
         st.markdown('<div class="card-title">Customer Information</div>', unsafe_allow_html=True)
@@ -502,41 +480,45 @@ if st.session_state.page in ("home", "results"):
         else:
             risk_class = "risk-high"; risk_icon = "🚨"; risk_lbl = "HIGH RISK — Loan Not Recommended"
 
-        col_back, _ = st.columns([1,5])
+        col_back, _ = st.columns([1, 5])
         with col_back:
             if st.button("← New Assessment"):
                 st.session_state.page = "home"; st.session_state.result = None; st.rerun()
 
+        # 1. Full-width decision banner
         st.markdown("")
-        col_gauge, col_shap = st.columns([1, 1.4])
+        st.markdown(
+            f'<div class="{risk_class}"><div class="risk-score">{risk*100:.1f}%</div>'
+            f'<div class="risk-label">{risk_icon} {risk_lbl}</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("")
 
-        with col_gauge:
-            st.markdown(f'<div class="{risk_class}"><div class="risk-score">{risk*100:.1f}%</div><div class="risk-label">{risk_icon} {risk_lbl}</div></div>', unsafe_allow_html=True)
-            st.markdown("")
-            st.plotly_chart(risk_gauge(risk), use_container_width=True)
-            st.markdown(f"""
-            <div class="metric-pill" style="text-align:left;padding:1rem">
-              <span class="status-dot"></span>
-              <b style="color:#0a2540">Model Comparison</b><br>
-              <small style="color:#6b7a99">XGBoost: <b>{risk*100:.1f}%</b> &nbsp;|&nbsp; Logistic Reg: <b>{res['lr_r']*100:.1f}%</b></small><br>
-              <small style="color:#6b7a99">Decision threshold: <b>{thr:.3f}</b></small>
-            </div>""", unsafe_allow_html=True)
+        # 2. Three-metric strip — the numbers a reviewer needs first
+        mc1, mc2, mc3 = st.columns(3)
+        mc1.metric("XGBoost Risk Score", f"{risk*100:.1f}%")
+        mc2.metric("Logistic Regression", f"{res['lr_r']*100:.1f}%")
+        mc3.metric("Decision Threshold", f"{thr:.3f}")
 
-        with col_shap:
-            st.markdown('<div class="card-title">Top Risk Factors (SHAP)</div>', unsafe_allow_html=True)
+        # 3. Gauge chart (supporting role)
+        st.plotly_chart(risk_gauge(risk), use_container_width=True)
+
+        # 4. SHAP factors in expander — detailed, not the headline
+        with st.expander("Why this score? (Top Risk Factors)", expanded=False):
             sv = res["sv"]; fn = res["feature_names"]
             top5 = np.argsort(np.abs(sv))[-8:][::-1]
             max_abs = max(np.abs(sv[top5])) + 1e-9
             for i in top5:
-                bar_w = int(abs(sv[i])/max_abs * 180)
+                bar_w = int(abs(sv[i]) / max_abs * 180)
                 bar_cls = "shap-bar-pos" if sv[i] > 0 else "shap-bar-neg"
-                direction = "↑ increases risk" if sv[i] > 0 else "↓ decreases risk"
-                st.markdown(f"""
-                <div class="shap-row">
-                  <div class="shap-feature">{fn[i][:22]}</div>
-                  <div class="{bar_cls}" style="width:{bar_w}px"></div>
-                  <div class="shap-val">{sv[i]:+.3f}</div>
-                </div>""", unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="shap-row">'
+                    f'<div class="shap-feature">{fn[i][:22]}</div>'
+                    f'<div class="{bar_cls}" style="width:{bar_w}px"></div>'
+                    f'<div class="shap-val">{sv[i]:+.3f}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
 
         # ── Cross-sell ──
         st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
@@ -555,7 +537,7 @@ if st.session_state.page in ("home", "results"):
             rules = res["rules"]
             if not rules.empty:
                 st.markdown("<br>**Association Rule Boosts:**", unsafe_allow_html=True)
-                prod_set = {p.lower().replace(" ","_") for p in seg.products}
+                prod_set = set(seg.products)
                 mask = rules["antecedents"].apply(lambda x: bool(set(x) & prod_set))
                 filtered = rules[mask].head(3)
                 if not filtered.empty:
@@ -567,9 +549,9 @@ if st.session_state.page in ("home", "results"):
             st.info(f"Customer not eligible for cross-sell (risk score {risk:.1%} ≥ 30% threshold).")
 
 # ════════════════════════════════════════════════════════════════════════════════
-# PAGE: MODEL PERFORMANCE
+# TAB: MODEL PERFORMANCE
 # ════════════════════════════════════════════════════════════════════════════════
-elif st.session_state.page == "performance":
+with tab_perf:
     m = None
     with st.spinner("Loading models and computing metrics..."):
         m = load_model()
