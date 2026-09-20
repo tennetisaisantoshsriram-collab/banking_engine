@@ -107,12 +107,13 @@ def calculate_shap_approximation(cust, prob_default):
 def calculate_fraud_and_clv(cust):
     # Simulate a sophisticated Fraud score based on anomalies
     # e.g., very high income but very low credit score
+    rng = random.Random(int(cust.get('customer_id', 0)))
     fraud_prob = 1.0
     if cust['income'] > 150000 and cust['credit_score'] < 500:
         fraud_prob += 45.0
     if cust['employment_length'] == 0 and cust['loan_amount'] > 50000:
         fraud_prob += 30.0
-    fraud_prob += random.uniform(0.5, 5.0)
+    fraud_prob += rng.uniform(0.5, 5.0)
     
     # Simulate Customer Lifetime Value (CLV)
     # Base CLV is 5% of income, modified by credit score
@@ -179,7 +180,7 @@ async def get_customer_details(customer_id: int):
         
         recs.append({
             "product": un,
-            "confidence": min(score / max(len(owned_products), 1) * 100, 95) + (np.random.rand()*5),
+            "confidence": min(score / max(len(owned_products), 1) * 100, 95) + (np.random.default_rng(int(cust['customer_id']) + hash(un) % 1000).random() * 5),
             "reasons": [f"High profile affinity"]
         })
     recs.sort(key=lambda x: x['confidence'], reverse=True)

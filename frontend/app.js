@@ -1,7 +1,6 @@
 const API_BASE = '/api';
 let riskChartInstance = null;
 let shapChartInstance = null;
-let radarChartInstance = null;
 let scatterChartInstance = null;
 let debounceTimer;
 
@@ -13,99 +12,6 @@ let portfolioAverages = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ===== AUTH =====
-    const authOverlay = document.getElementById('auth-overlay');
-
-    // Optimistic hide if token exists — verify in background
-    const storedToken = localStorage.getItem('aether_token');
-    if (storedToken) {
-        authOverlay.classList.add('hidden');
-        fetch(`${API_BASE}/auth/verify?token=${storedToken}`)
-            .then(r => r.ok ? r.json() : Promise.reject())
-            .then(d => { document.getElementById('logged-in-user').textContent = '👤 ' + d.username; })
-            .catch(() => {
-                localStorage.removeItem('aether_token');
-                localStorage.removeItem('aether_username');
-                authOverlay.classList.remove('hidden');
-            });
-    }
-
-    // Tab switching
-    document.getElementById('tab-login').addEventListener('click', () => {
-        document.getElementById('tab-login').classList.add('active');
-        document.getElementById('tab-signup').classList.remove('active');
-        document.getElementById('login-form').style.display = 'block';
-        document.getElementById('signup-form').style.display = 'none';
-    });
-    document.getElementById('tab-signup').addEventListener('click', () => {
-        document.getElementById('tab-signup').classList.add('active');
-        document.getElementById('tab-login').classList.remove('active');
-        document.getElementById('signup-form').style.display = 'block';
-        document.getElementById('login-form').style.display = 'none';
-    });
-
-    // Login
-    const doLogin = async () => {
-        const username = document.getElementById('login-username').value.trim();
-        const password = document.getElementById('login-password').value;
-        const errEl = document.getElementById('login-error');
-        errEl.style.display = 'none';
-        if (!username || !password) { errEl.textContent = 'Please fill all fields.'; errEl.style.display = 'block'; return; }
-        const btn = document.getElementById('login-btn');
-        btn.textContent = 'Logging in...'; btn.disabled = true;
-        try {
-            const res = await fetch(`${API_BASE}/auth/login`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({username, password})
-            });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Login failed'); }
-            const data = await res.json();
-            localStorage.setItem('aether_token', data.token);
-            localStorage.setItem('aether_username', data.username);
-            document.getElementById('logged-in-user').textContent = '👤 ' + data.username;
-            authOverlay.classList.add('hidden');
-        } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
-        finally { btn.textContent = 'Login'; btn.disabled = false; }
-    };
-    document.getElementById('login-btn').addEventListener('click', doLogin);
-    document.getElementById('login-password').addEventListener('keypress', e => { if(e.key === 'Enter') doLogin(); });
-
-    // Signup
-    const doSignup = async () => {
-        const username = document.getElementById('signup-username').value.trim();
-        const password = document.getElementById('signup-password').value;
-        const errEl = document.getElementById('signup-error');
-        errEl.style.display = 'none';
-        if (!username || !password) { errEl.textContent = 'Please fill all fields.'; errEl.style.display = 'block'; return; }
-        const btn = document.getElementById('signup-btn');
-        btn.textContent = 'Creating...'; btn.disabled = true;
-        try {
-            const res = await fetch(`${API_BASE}/auth/signup`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({username, password})
-            });
-            if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Signup failed'); }
-            const data = await res.json();
-            localStorage.setItem('aether_token', data.token);
-            localStorage.setItem('aether_username', data.username);
-            document.getElementById('logged-in-user').textContent = '👤 ' + data.username;
-            authOverlay.classList.add('hidden');
-        } catch(e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
-        finally { btn.textContent = 'Create Account'; btn.disabled = false; }
-    };
-    document.getElementById('signup-btn').addEventListener('click', doSignup);
-    document.getElementById('signup-password').addEventListener('keypress', e => { if(e.key === 'Enter') doSignup(); });
-
-    // Logout
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        localStorage.removeItem('aether_token');
-        localStorage.removeItem('aether_username');
-        document.getElementById('logged-in-user').textContent = '';
-        document.getElementById('login-username').value = '';
-        document.getElementById('login-password').value = '';
-        authOverlay.classList.remove('hidden');
-    });
-    // ===== END AUTH =====
 
     // Theme Toggle
     document.getElementById('theme-btn').addEventListener('click', () => {
@@ -114,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const isLight = document.body.classList.contains('light-mode');
         Chart.defaults.color = isLight ? '#475569' : '#94a3b8';
         if(shapChartInstance) shapChartInstance.update();
-        if(radarChartInstance) radarChartInstance.update();
     });
 
     // Export Print
@@ -154,102 +59,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tab switching
     document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
+        item.addEventListener('click', () => {
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.querySelectorAll('.view-section').forEach(v => v.classList.add('hidden'));
-            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-            
-            e.target.classList.add('active');
-            const targetId = e.target.getAttribute('data-target');
-            document.getElementById(targetId).classList.add('active');
-            document.getElementById(targetId).classList.remove('hidden');
+            document.querySelectorAll('.view-section').forEach(v => {
+                v.classList.add('hidden');
+                v.classList.remove('active');
+            });
+            item.classList.add('active');
+            const targetId = item.getAttribute('data-target');
+            const target = document.getElementById(targetId);
+            if (target) {
+                target.classList.add('active');
+                target.classList.remove('hidden');
+            }
         });
     });
+
+    // Settings theme button mirrors main theme toggle
+    const settingsThemeBtn = document.getElementById('settings-theme-btn');
+    if (settingsThemeBtn) {
+        settingsThemeBtn.addEventListener('click', () => {
+            document.getElementById('theme-btn').click();
+        });
+    }
 
     fetchPortfolio();
     fetchCustomers();
     initRiskChart();
     initShapChart();
-    initRadarChart();
     initScatterChart();
     initHeatmap();
-    
-    // Chat UI Listeners
-    const chatPanel = document.getElementById('ai-chat-panel');
-    const chatInput = document.getElementById('chat-input');
-    const sendChatBtn = document.getElementById('send-chat-btn');
-    const chatMessages = document.getElementById('chat-messages');
 
-    document.getElementById('open-chat-btn').addEventListener('click', () => {
-        chatPanel.style.transform = 'translateY(0)';
-    });
-    document.getElementById('close-chat-btn').addEventListener('click', () => {
-        chatPanel.style.transform = 'translateY(120%)';
-    });
-
-    const addMessage = (msg, isUser) => {
-        const div = document.createElement('div');
-        div.style.padding = '8px';
-        div.style.borderRadius = '8px';
-        div.style.maxWidth = '85%';
-        div.style.marginTop = '10px';
-        if (isUser) {
-            div.style.alignSelf = 'flex-end';
-            div.style.background = 'rgba(255,255,255,0.1)';
-            div.style.border = '1px solid rgba(255,255,255,0.2)';
-        } else {
-            div.style.alignSelf = 'flex-start';
-            div.style.background = 'rgba(99, 102, 241, 0.2)';
-        }
-        div.textContent = msg;
-        chatMessages.appendChild(div);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    };
-
-    const handleChat = async () => {
-        const text = chatInput.value.trim();
-        if(!text) return;
-        addMessage(text, true);
-        chatInput.value = '';
-        
-        // Mock AI response
-        setTimeout(() => {
-            const risk = document.getElementById('risk-score-value').textContent;
-            addMessage(`Based on my Watsonx analysis, this customer's current risk is ${risk}. This is largely driven by their income and requested loan amount. Adjust the sliders on the left to simulate how we can lower this risk.`, false);
-        }, 1000);
-    };
-
-    sendChatBtn.addEventListener('click', handleChat);
-    chatInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleChat(); });
     document.getElementById('search-btn').addEventListener('click', () => {
         const customerId = document.getElementById('customer-select').value;
         if (customerId) analyzeCustomer(customerId);
-    });
-
-    // Advanced Search
-    document.getElementById('advanced-search-btn').addEventListener('click', () => {
-        document.getElementById('advanced-search-modal').style.display = 'flex';
-        document.getElementById('modal-overlay').style.display = 'block';
-    });
-    document.getElementById('close-modal-btn').addEventListener('click', () => {
-        document.getElementById('advanced-search-modal').style.display = 'none';
-        document.getElementById('modal-overlay').style.display = 'none';
-    });
-    document.getElementById('apply-search-btn').addEventListener('click', () => {
-        const minIncome = parseFloat(document.getElementById('search-min-income').value);
-        const maxRisk = parseFloat(document.getElementById('search-max-risk').value);
-        const select = document.getElementById('customer-select');
-        let count = 0;
-        Array.from(select.options).forEach(opt => {
-            if(!opt.value) return;
-            // Mock filter logic
-            const passes = Math.random() > 0.5;
-            opt.style.display = passes ? 'block' : 'none';
-            if(passes) count++;
-        });
-        alert(`Filtered list down to ${count} matching customers.`);
-        document.getElementById('close-modal-btn').click();
     });
 
     // CRM Notes
@@ -302,16 +145,10 @@ async function fetchPortfolio() {
     try {
         const res = await fetch(`${API_BASE}/portfolio`);
         const data = await res.json();
-        document.getElementById('kpi-customers').textContent = data.total_customers.toLocaleString();
-        document.getElementById('kpi-exposure').textContent = '$' + (data.total_loan_exposure / 1000000).toFixed(1) + 'M';
-        document.getElementById('kpi-default').textContent = data.avg_default_rate.toFixed(1) + '%';
-        
         portfolioAverages.credit_score = data.average_credit_score;
-        // In a real app, backend would send other averages. Using rough approximations for prototype:
-        portfolioAverages.income = 65000; 
+        portfolioAverages.income = 65000;
         portfolioAverages.loan_amount = 18000;
         portfolioAverages.age = 45;
-        
     } catch (e) { console.error(e); }
 }
 
@@ -365,9 +202,7 @@ async function analyzeCustomer(customerId) {
         updateAdvancedMetrics(data.advanced_metrics);
         updateShap(data.xai);
         updateCrossSell(data.recommendations);
-        updateRadar(cust);
         updateScatter(cust, data.risk_assessment.default_probability);
-        updateTimeline(customerId);
         
         // Fetch CRM notes
         document.getElementById('crm-notes-input').disabled = false;
@@ -420,9 +255,6 @@ function triggerSimulation() {
             updateRisk(data.risk_assessment);
             updateAdvancedMetrics(data.advanced_metrics);
             updateShap(data.xai);
-            
-            // Also update radar and scatter dynamically
-            updateRadar(payload);
             updateScatter(payload, data.risk_assessment.default_probability);
 
             // Calculate Amortization (5 Yrs @ 7%)
@@ -442,17 +274,25 @@ function updateProfile(cust) {
         <div class="info-row"><span class="info-label">Age</span><span class="info-value">${cust.age}</span></div>
         <div class="info-row"><span class="info-label">Credit Score</span><span class="info-value glow-text">${cust.credit_score}</span></div>
         <div class="info-row"><span class="info-label">Employment</span><span class="info-value">${cust.employment_length} yrs</span></div>
+        <div class="info-row"><span class="info-label">Income</span><span class="info-value">$${parseInt(cust.income).toLocaleString()}</span></div>
+        <div class="info-row"><span class="info-label">Loan Amount</span><span class="info-value">$${parseInt(cust.loan_amount).toLocaleString()}</span></div>
     `;
+    const productsSection = document.getElementById('products-section');
     const tagsDiv = document.getElementById('owned-products');
-    tagsDiv.innerHTML = cust.owned_products.length ? cust.owned_products.map(p => `<span class="tag">${p}</span>`).join('') : '<span class="placeholder-text">None</span>';
+    if (cust.owned_products && cust.owned_products.length) {
+        tagsDiv.innerHTML = cust.owned_products.map(p => `<span class="tag">${p}</span>`).join('');
+        productsSection.style.display = 'block';
+    } else {
+        productsSection.style.display = 'none';
+    }
 }
 
 function initRiskChart() {
     const ctx = document.getElementById('riskChart').getContext('2d');
     riskChartInstance = new Chart(ctx, {
         type: 'doughnut',
-        data: { datasets: [{ data: [0, 100], backgroundColor: ['#6366f1', 'rgba(150,150,150,0.1)'], borderWidth: 0, cutout: '80%', circumference: 180, rotation: 270 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: {tooltip: {enabled: false}}, animation: {duration: 500} }
+        data: { datasets: [{ data: [0, 100], backgroundColor: ['#6366f1', 'rgba(150,150,150,0.1)'], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '80%', circumference: 180, rotation: 270, plugins: {tooltip: {enabled: false}}, animation: {duration: 500} }
     });
 }
 
@@ -467,7 +307,8 @@ function updateRisk(riskInfo) {
     
     valEl.style.color = color;
     
-    riskChartInstance.data.datasets[0].data = [prob, 100 - prob];
+    const arcProb = Math.max(prob, 2); // minimum arc so gauge is always visible
+    riskChartInstance.data.datasets[0].data = [arcProb, 100 - arcProb];
     riskChartInstance.data.datasets[0].backgroundColor[0] = color;
     riskChartInstance.update();
 }
@@ -504,52 +345,6 @@ function updateShap(xai) {
     shapChartInstance.update();
 }
 
-function initRadarChart() {
-    const ctx = document.getElementById('radarChart').getContext('2d');
-    radarChartInstance = new Chart(ctx, {
-        type: 'radar',
-        data: {
-            labels: ['Income', 'Credit Score', 'Loan Amount', 'Age'],
-            datasets: [
-                {
-                    label: 'Customer',
-                    data: [0, 0, 0, 0],
-                    backgroundColor: 'rgba(99, 102, 241, 0.4)',
-                    borderColor: '#6366f1',
-                    pointBackgroundColor: '#6366f1'
-                },
-                {
-                    label: 'Portfolio Avg',
-                    data: [100, 100, 100, 100], // normalized
-                    backgroundColor: 'rgba(150, 150, 150, 0.1)',
-                    borderColor: 'rgba(150, 150, 150, 0.3)',
-                    borderDash: [5, 5]
-                }
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { r: { angleLines: {color: 'rgba(150,150,150,0.1)'}, grid: {color: 'rgba(150,150,150,0.1)'}, pointLabels: {font: {size: 10}}, ticks: {display: false} } },
-            plugins: { legend: {position: 'bottom'} }
-        }
-    });
-}
-
-function updateRadar(cust) {
-    // Normalize data against portfolio average (100 = average)
-    const incomeNorm = (cust.income / portfolioAverages.income) * 100;
-    const creditNorm = (cust.credit_score / portfolioAverages.credit_score) * 100;
-    const loanNorm = (cust.loan_amount / portfolioAverages.loan_amount) * 100;
-    const ageNorm = (cust.age / portfolioAverages.age) * 100;
-    
-    radarChartInstance.data.datasets[0].data = [
-        Math.min(incomeNorm, 200), // Cap at 200% for display
-        Math.min(creditNorm, 200),
-        Math.min(loanNorm, 200),
-        Math.min(ageNorm, 200)
-    ];
-    radarChartInstance.update();
-}
 
 function updateCrossSell(recs) {
     const div = document.getElementById('recommendations-list');
@@ -616,27 +411,6 @@ function updateScatter(cust, riskProb) {
     scatterChartInstance.update();
 }
 
-async function updateTimeline(customerId) {
-    const container = document.getElementById('history-timeline');
-    try {
-        const res = await fetch(`${API_BASE}/customers/${customerId}/history`);
-        const data = await res.json();
-        
-        container.innerHTML = data.history.map(event => `
-            <div class="timeline-item">
-                <div class="timeline-dot">${event.icon}</div>
-                <div class="timeline-content">
-                    <div class="timeline-date">${event.date}</div>
-                    <div class="timeline-title">${event.title}</div>
-                    <div class="timeline-desc">${event.description}</div>
-                </div>
-            </div>
-        `).join('');
-    } catch (e) {
-        console.error(e);
-        container.innerHTML = '<p class="placeholder-text">Failed to load history.</p>';
-    }
-}
 
 let heatmapChartInstance;
 function initHeatmap() {
@@ -689,8 +463,8 @@ function initCustomCharts() {
     const rctx = document.getElementById('customRiskChart').getContext('2d');
     customRiskChartInstance = new Chart(rctx, {
         type: 'doughnut',
-        data: { datasets: [{ data: [0, 100], backgroundColor: ['#6366f1', 'rgba(150,150,150,0.1)'], borderWidth: 0, cutout: '80%', circumference: 180, rotation: 270 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { enabled: false } }, animation: { duration: 500 } }
+        data: { datasets: [{ data: [0, 100], backgroundColor: ['#6366f1', 'rgba(150,150,150,0.1)'], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '80%', circumference: 180, rotation: 270, plugins: { tooltip: { enabled: false } }, animation: { duration: 500 } }
     });
 
     const sctx = document.getElementById('customShapChart').getContext('2d');
@@ -716,7 +490,8 @@ function updateCustomResults(data) {
     const riskEl = document.getElementById('custom-risk-value');
     riskEl.textContent = prob + '%';
     riskEl.style.color = color;
-    customRiskChartInstance.data.datasets[0].data = [prob, 100 - prob];
+    const arcProb2 = Math.max(prob, 2);
+    customRiskChartInstance.data.datasets[0].data = [arcProb2, 100 - arcProb2];
     customRiskChartInstance.data.datasets[0].backgroundColor[0] = color;
     customRiskChartInstance.update();
 
